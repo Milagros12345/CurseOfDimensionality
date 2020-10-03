@@ -4,7 +4,6 @@
 #include<fstream>
 #include <sstream>
 #include<string>
-
 using namespace std;
 class Point{
 public:
@@ -15,171 +14,179 @@ public:
     Point operator+( const Point&r)const {return Point(x+r.x,y+r.y,z+r.z); }
     Point operator+(const int n)const{return Point(x+n,y+n,z+n);}
     Point operator-(const Point&r)const{return Point(x-r.x,y-r.y,z-r.z);}
-    Point operator-(const int n)const{return Point(x-n,y-n,z-n);}
-    Point operator*(const Point&r)const{return Point(x*r.x,y*r.y,z*r.z);}
     Point operator/( const Point&r)const{return Point(x/r.x,y/r.y,z/r.z);}
-    Point operator*(float r){return Point(x*r,y*r,z*r);}
     Point operator/(float r){return Point(x/r,y/r,z/r);}
 
     friend ostream& operator<<(ostream& stream,Point &o){
         stream<<"x: "<<o.x<<"y: "<<o.y<<"z: "<<o.z;
         return stream;
     }
-    friend ostream& operator<<(ostream& stream, const Point&o){
-        stream<<"x:"<<o.x<<" y:"<<o.y<<" z:"<<o.z;
-        return stream;
-    }
-    Point operator+=( Point &r){
-        x+=r.x;
-        y+=r.y;
-        z+=r.z;return Point(x,y,z);}
-
     Point(int n):x(n),y(n),z(n){}
+    bool operator!=(Point &r){return x!=r.x &&y!=r.y &&z!=r.z;}
     bool operator==(Point &r){ return x==r.x&&y==r.y&&z==r.z; }
     bool operator==(float n){return x==n&&y==n&&z==n;}
     Point operator=(const Point &r){ return Point(x=r.x,y=r.y,z=r.z); }
-    bool operator!=(Point &r){return x!=r.x &&y!=r.y &&z!=r.z;}
-    bool operator!=(float r){return x!=r &&y!=r &&z!=r;}
-
-
 };
-
-class Octree{
+class nodo{
 public:
-    Point base;
-    Point alto;
-    Octree *padre;
-    Octree *hijo[8];
-    Point valor;
-
-    Octree(Point a,Point b):base(a),alto(b),padre(0),valor(0){
+    nodo* hijo[8];
+    Point base,alto;
+    vector<Point>points;int color;
+    long long Nump,Nump2;
+    nodo(Point a,Point b){
+        base=a;alto=b;color=1;//blanco
+        Nump=(alto.x-base.x)*(alto.y-base.y)*(alto.y-base.y)*(0.5);
+        if(Nump<1)Nump=1;
         for(int i=0;i<8;i++){
             hijo[i]=0;
         }
     }
-    Octree(float _x,float _y,float _z):valor(0),padre(0){
-        Point m(_x*.5f,_y*.5f,_z*.5f);
-        base=m;
-        alto=m;
-        for(int i=0;i<8;i++)
-            hijo[i]=0;
+};
+class octree{
+public:
+    nodo*root;
+    octree(){}
+    octree(Point lim1,Point lim2){
+        root=new nodo(lim1,lim2);//creamos el nodo
     }
-    Octree():padre(0),valor(0){
-        for(int i=0;i<8;i++)
-            hijo[i]=0;
+    bool limites( Point p,nodo *ptr){
+        return((p.x>ptr->alto.x ||p.x<ptr->base.x) ||(p.y>ptr->alto.y ||p.y<ptr->base.y) || (p.z>ptr->alto.z || p.z<ptr->base.z));
     }
-    ~Octree(){
-        for(int i=0;i<8;i++)
-            delete hijo[i];
+    int obtenerpos(Point p1,Point centro){
+        if(p1.x<=centro.x && p1.y<=centro.y && p1.z<=centro.z)return 0;
+        if(p1.x>centro.x && p1.y<=centro.y && p1.z<=centro.z)return 1;
+        if(p1.x<=centro.x && p1.y<=centro.y && p1.z>centro.z)return 2;
+        if(p1.x>centro.x && p1.y<=centro.y && p1.z>centro.z)return 3;
+        if(p1.x<=centro.x && p1.y>centro.y && p1.z<=centro.z)return 4;
+        if(p1.x>centro.x && p1.y>centro.y && p1.z<=centro.z)return 5;
+        if(p1.x<=centro.x && p1.y>centro.y && p1.z>centro.z)return 6;
+        if(p1.x>centro.x && p1.y>centro.y && p1.z>centro.z)return 7;
     }
-    bool limites( Point &p){
-        return((p.x>alto.x ||p.x<base.x) ||(p.y>alto.y ||p.y<base.y) || (p.z>alto.z || p.z<base.z));
+    void radio(nodo *ptr,Point &p){
+        p=(ptr->base+ptr->alto)/2;
     }
-    void insert(Point &p){
-        cout<<base<<","<<alto<<","<<"Point: "<<p<<endl;
-        if(this->hijo[0]==nullptr){
-            //find(p);
-            if(valor==0){
-                valor=p;return;
+    void Cnodo(int pos,nodo *ptr,Point &medio,Point &i,Point &a){
+        if(pos==0){i=ptr->base;a=medio;}
+        else if(pos==1){i.x=medio.x;i.y=ptr->base.y;i.z=ptr->base.z;a.x=ptr->alto.x;a.y=medio.y;a.z=medio.z;}
+        else if(pos==2){i.x=ptr->base.x;i.y=ptr->base.y;i.z=medio.z;a.x=medio.x;a.y=medio.y;a.z=ptr->alto.z;}
+        else if(pos==3){i.x=medio.x;i.y=ptr->base.y;i.z=medio.z;a.x=ptr->alto.x;a.y=medio.y;a.z=ptr->alto.z;}
+        else if(pos==4){i.x=ptr->base.x;i.y=medio.y;i.z=ptr->base.z;a.x=medio.x;a.y=ptr->alto.y;i.z=medio.z;}
+        else if(pos==5){i.x=medio.x;i.y=medio.y;i.z=ptr->base.z;a.x=ptr->alto.x;a.y=ptr->alto.y;a.z=medio.z;}
+        else if(pos==6){i.x=ptr->base.x;i.y=medio.y;i.z=medio.z;a.x=medio.x;a.y=ptr->alto.y;a.z=ptr->alto.z;}
+        else if(pos==7){i=medio;a=ptr->alto;}
+    }
+    bool find(Point p,nodo *&ptr){
+        if(limites(p,ptr))return false;
+        if(ptr->Nump<=ptr->Nump2){
+            for(int i=0;i<ptr->points.size();i++){
+                if(ptr->points[i]==p)return true;
             }
-            else if(p.x==this->valor.x && p.y==this->valor.y && p.z==this->valor.z){
-                cout<<"ya existe este Punto!!!!"<<endl;return;
-            }
-            else{
-                for(int i=0;i<8;i++){
-                    Point p_n=this->base;
-                    p_n.x+=this->alto.x*(i&1 ? 0.5f : -0.5f);
-                    p_n.y+=this->alto.y*(i&2 ? 0.5f : -0.5f);
-                    p_n.z+=this->alto.z*(i&4 ? 0.5f : -0.5f);
-                    hijo[i]=new Octree(p_n,this->alto*0.5f);
-                    hijo[i]->padre=this;
-
-                }
-                Point aux=this->valor;
-                valor=0;
-                this->insert(aux);
-                this->insert(p);
-            }
+        return false;
         }
         else{
-            this->hijo[get_posicion_hijo(p)]->insert(p);
+            Point medio;
+            radio(ptr,medio);
+            int pos=obtenerpos(p,medio);
+            if(ptr->hijo[pos]==0 || ptr->hijo[pos]->color==0 )return false;
+            find(p,ptr->hijo[pos]);
         }
-
     }
-    void radio(Point centro, float r,vector<Point*>&Ps){
-        Point p_min=centro-r;
-        Point p_max=centro+r;
-        if(hijo[0]==nullptr){
-            if(valor!=0){
-                Point *p= &valor;
-                if(p->x>p_max.x || p->y>p_max.y || p->z>p_max.z)return;
-                if(p->x<p_min.x || p->y<p_min.y || p->z<p_min.z)return;
-                Ps.push_back(p);//dua valor
-            }
-        }else{
+    void insert(nodo *&ptr,Point &p,int c){
+        cout<<"limite inferior"<<ptr->base<<"   limite superior"<<ptr->alto<<"   Punto"<<p<<endl;
+        if(limites(p,ptr) || find(p,ptr)){cout<<"fuera de limite o ya existe "<<endl;return;}
+        if(ptr->Nump2>=ptr->Nump){vector<Point>aux;
             for(int i=0;i<8;i++){
-                Point p_max1=hijo[i]->base+hijo[i]->alto;
-                Point p_min1=hijo[i]->base-hijo[i]->alto;
-
-                if(p_max1.x<p_min.x ||p_max1.y<p_min.y || p_max1.z<p_min.z)continue;
-                if(p_min1.x>p_max.x ||p_min1.y>p_max.y || p_min1.z>p_max.z)continue;
-                hijo[i]->radio(centro,r,Ps);
-            }
-        }
-
-    }
-    bool find(Point pn){//solo indica si encontro o no
-        if(this->hijo[0]==nullptr){
-            if(this->valor!=0){
-                if(pn.x==this->valor.x&&pn.y==this->valor.y && pn.z==this->valor.z)
-                    return true;
-                return false;
-            }
+                if(ptr->hijo[i]==0)continue;
+                for(int x=0;x<ptr->hijo[i]->points.size();x++){
+                    aux.push_back(ptr->hijo[i]->points[x]);
+                }ptr->hijo[i]=nullptr;
+            }for(int i=0;i<ptr->points.size();i++){
+                aux.push_back(ptr->points[i]);
+            }aux.push_back(p);ptr->Nump2++;
+            ptr->points=aux;
         }
         else{
-            hijo[get_posicion_hijo(pn)]->find(pn);
+            if(c!=0)ptr->Nump2++;Point medio;
+            radio(ptr,medio);
+            int pos=obtenerpos(p,medio);
+            if(ptr->hijo[pos]->color==0 || ptr->hijo[pos]==0){cout<<"ente"<<endl;
+                Point ini,fin;
+                Cnodo(pos,ptr,medio,ini,fin);
+                ptr->hijo[pos]=new nodo(ini,fin);
+            }insert(ptr->hijo[pos],p,c);
+        }
+
+    }
+    void insertP(octree oc,vector<vector<float>>points){
+        for(int i=0;i<points.size();i++){
+            Point p(points[i][0],points[i][1],points[i][2]);
+            nodo *ptr=oc.root;
+            oc.insert(ptr,p,1);
         }
     }
-    int get_posicion_hijo(const Point &p){
-        int pos=0;
-        if(p.x>=this->base.x)pos+=1;
-        if(p.y>=this->base.y)pos+=2;
-        if(p.z>=this->base.z)pos+=4;
-        return pos;
+    void remove(Point p,nodo* ptr){
+        if(limites(p,ptr) || !find(p,ptr)){cout<<"fuera de limite o no existe "<<endl;return;}
+        if(ptr->Nump2>=ptr->Nump){
+            auto i=ptr->points.begin();
+            while(*i!=p)++i;
+            ptr->points.erase(i);
+            if(ptr->points.size()==0)ptr->color=0;
+        }else{
+            Point *p1,medio;
+            radio(ptr,medio);
+            int pos=obtenerpos(p,medio);ptr->Nump2--;
+            if(ptr->hijo[pos] == 0 || ptr->hijo[pos]->color == 0) return;
+            remove(p,ptr->hijo[pos]);
+        }
     }
-    void imprimir_p( vector<Point*>p){cout<<"imprimiendo"<<endl;
-        for(int i=0;i<p.size();i++){
-            cout<<(*p[i])<<endl;
+    void imprimir(nodo*n){
+        for(int i=0;i<n->points.size();i++){
+            cout<<n->points[i]<<endl;
         }
     }
 };
-
+void ObtenerPoints(string dir,vector<vector<float>>&point){
+    ifstream archivo(dir);
+    string s;vector<float>peque;
+    float x,y,z;
+    if(archivo.fail()){
+        cout<<"fallo..."<<endl;
+    }
+    while(!archivo.eof()){
+        archivo>>s;
+        if(s!="v")break;
+        archivo>>x>>y>>z;
+        cout<<"x:"<<x<<" y:"<<y<<" z:"<<z<<endl;
+        peque.push_back(x);
+        peque.push_back(y);
+        peque.push_back(z);
+//        for(int i=0;i<peque.size();i++)
+//            cout<<peque[i]<<endl;
+        point.push_back(peque);
+        peque.clear();
+    }
+}
+void print(vector<vector<float>>p){
+    for(int i=0;i<p.size();i++){
+        for(int j=0;j<p[i].size();j++)
+            cout<<"point"<<p[i][j]<<" ";
+            cout<<endl;
+    }
+}
 int main()
-{    vector<Point*>punto;
-     Point base(1,0,0);
-     Point fin(5,4,4);
-     Octree t(base,fin);
-     Point a(2,1,2);
-     Point b(2,2,1);
-     Point c(2,1,4);
-     Point d(2,3,3);
-     Point e(3,4,2);
-     Point f(3,1,4);
-     Point g(1,1,3);
-     Point h(2,1,3);
-     Point i(3,2,2);
+{
+    string dir="D:/sexto_semestre/EDA/code/prueba.obj"; vector<vector<float>>points;
+    Point a(-1,-1,-1),b(10,10,10),c(2,3,2),d(5,5,2);
+    octree oc(a,b);
+    nodo *p1=oc.root;
 
-     t.insert(h);
-    t.insert(b);
-    t.insert(c);
-    t.insert(d);
-    t.insert(e);
-    t.insert(f);
-    t.insert(g);
-    t.insert(h);
-    t.insert(i);
-    t.radio(fin-base,3,punto);
-    t.imprimir_p(punto);
-    cout<<t.limites(i)<<endl;
+    ObtenerPoints(dir,points);
+    oc.insertP(oc,points);
+    print(points);
+    cout<<oc.find(d,p1)<<"encontro";
+    oc.imprimir(p1);
+    oc.remove(d,p1);
+    //cout<<oc.find(d,p1)<<"encontro";
+
     return 0;
 }
